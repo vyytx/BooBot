@@ -2,6 +2,8 @@
 if(!process.env.hasOwnProperty("PLATFORM") || process.env["PLATFORM"] != "replit")
     require('dotenv').config();
 
+const webServer = require('./webServer.js');
+
 const Discord = require('discord.js');
 const Client = new Discord.Client();
 
@@ -398,4 +400,5 @@ Client.on('guildDelete', (guild) => {
 		.write();
 });
 
-Client.login(process.env.TOKEN);
+webServer(); //work as a maintainer
+Client.login(process.env["TOKEN"]);

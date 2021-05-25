@@ -18,9 +18,11 @@
   },
   "homepage": "https://github.com/vyytx/BooBot#readme",
   "dependencies": {
+    "axios": "^0.21.1",
     "common-tags": "^1.8.0",
     "discord.js": "^12.5.3",
     "dotenv": "^9.0.2",
+    "express": "^4.17.1",
     "lowdb": "^1.0.0"
   }
 }
