@@ -13,8 +13,4 @@ function Maintainer() {
 	})
 }
 
-let it = setInterval(async () => {
-	console.log(`${ele}:`, (await axios.get(`https://${ele}.vyytx.repl.co/`)).data);
-}, 60*1000);
-
 module.exports = Maintainer;
