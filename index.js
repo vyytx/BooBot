@@ -491,7 +491,12 @@ const C2J = require("csvtojson");
 			serverID = pureMsg.channel.guild.id;
 		if(serverSpecific.hasOwnProperty(serverID) && serverSpecific[serverID].hasOwnProperty("commands"))	// nesting to prevent key not found
 			if(serverSpecific[serverID]["commands"].hasOwnProperty(commandName)) {
-				serverSpecific[serverID]["commands"][commandName]["_func"].apply(serverSpecific[serverID], [pureMsg].concat(args));
+				if(serverSpecific[serverID]["commands"][commandName].hasOwnProperty("_type") && serverSpecific[serverID]["commands"][commandName]["_type"] == "alias") {
+					realCommandName = serverSpecific[serverID]["commands"][commandName]["_orig"];
+					serverSpecific[serverID]["commands"][realCommandName]["_func"].apply(serverSpecific[serverID], [pureMsg].concat(args));
+				}else {
+					serverSpecific[serverID]["commands"][commandName]["_func"].apply(serverSpecific[serverID], [pureMsg].concat(args));
+				}
 				return true;
 			}
 		return false;
