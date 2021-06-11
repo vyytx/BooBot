@@ -12,6 +12,8 @@ const {stripIndents} = require("common-tags");
 
 const _ = require('lodash');
 
+const C2J = require("csvtojson");
+
 (async () => {
 	const lowdb = await import('lowdb');
 	return {lowdb: lowdb};
@@ -92,6 +94,26 @@ const _ = require('lodash');
 							नमस्कार
 						`.split('\n');
 						msg.reply(list[Math.floor(Math.random()*(list.length-1))]);
+					}
+				},
+				"Schedule" : "sep",
+				timetable: {
+					_desc: "列出課表",
+					_usage: ".timetable",
+					_func: function(msg, ...args) {
+						let text = `__`;
+						const tt = this.timetable;
+						for(let index = -1; index < tt.length; index++) {
+							let timeset = tt[(index == -1) ? 0 : index];
+							Object.keys(timeset).forEach((tad, index2) => { // tad == time and days
+								if(index == -1)
+									text += ((index2 == 0) ? "時間" : `**${tad}**`).padEnd(10, '　') + ((index2 == 5) ? "__" : "");
+								else
+									text += timeset[tad].padEnd(index2 == 0 ? 10 : 6, '　');
+							});
+							text += '\n';
+						};
+						msg.channel.send(text);
 					}
 				},
 				"Auction": "sep",
@@ -266,6 +288,10 @@ const _ = require('lodash');
 						return;
 					}
 				},
+				"ra": {
+					_type: "alias",
+					_orig: "revokeAuction"
+				},
 				auctionDetail: {
 					_desc: "列出競標詳細訊息",
 					_usage: ".auctionDetail {在競標間內}",
@@ -289,6 +315,10 @@ const _ = require('lodash');
 						return;
 					}
 				},
+				"ad": {
+					_type: "alias",
+					_orig: "auctionDetail"
+				},
 				"Help": "sep",
 				help: {
 					_desc: "幫助",
@@ -310,8 +340,13 @@ const _ = require('lodash');
 										embed.addField(`\u200b`, `\u200b`, false);
 									embed.addField(`${key}`, `------------------------`, false);
 								}else {
-									if(flag)
+									if(flag) {
+										if(x.hasOwnProperty("_type") && x["_type"] == "alias") {
+											embed.fields.find(f => f.name == `${x["_orig"]} ${this.commands[x["_orig"]]["_desc"]}`).name += ` ⇔ ${key}`;
+											return;
+										}
 										embed.addField(`${key} ${x['_desc']}`, `> ${x['_usage']}`, false);
+									}
 								}
 							});
 						}else {
@@ -327,20 +362,12 @@ const _ = require('lodash');
 					}
 				},
 				"TEST": "sep",
-				testpr: {
-					_desc: "測試pr",
-					_usage: ".testpr",
-					_func: function(msg, ...args) {
-						msg.channel.send("$pr");
-					}
-				}
 			},
+			timetable: await C2J().fromFile("db/timetable.csv"),
 			checkAuction: async function(rawNowDate) {
 				const BRDB = this.db.get('biddingRooms');
 				BRDB.value().forEach(async auctionObj => {
 					let channel = Client.channels.cache.find(x => x.id == auctionObj["channelId"]);
-					// console.log(rawNowDate);
-					// console.log(auctionObj["endTime"]);
 					if(rawNowDate.getTime() >= auctionObj["endTime"]) {
 						channel.updateOverwrite(channel.guild.roles["everyone"], { VIEW_CHANNEL: false });
 						channel.updateOverwrite(channel.guild.members.cache.find(x => x.id == auctionObj["owner"]), { VIEW_CHANNEL: true });
