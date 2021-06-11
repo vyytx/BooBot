@@ -116,6 +116,10 @@ const C2J = require("csvtojson");
 						msg.channel.send(text);
 					}
 				},
+				"tt": {
+					_type: "alias",
+					_orig: "timetable"
+				},
 				"Auction": "sep",
 				auction: {
 					_desc: "設立競標間",
@@ -352,7 +356,7 @@ const C2J = require("csvtojson");
 						}else {
 							if(this.commands.hasOwnProperty(args[0])) {
 								const x = this.commands[args[0]];
-								embed.addField(`${args[0]} ${x.desc}`, `> ${x.usage}`, false);
+								embed.addField(`${args[0]} ${x['_desc']}`, `> ${x['_usage']}`, false);
 							}else {
 								msg.reply("沒這指令");
 								return;
