@@ -43,6 +43,9 @@ const C2J = require("csvtojson");
 	}
 	publicDB.chain = _.chain(publicDB.data);
 
+	const classLinksDB = new Low(new JSONFile('db/classLinks.json'));
+	await classLinksDB.read();
+
 	const EMOJI = (name) => Client.emojis.cache.find(emoji => emoji.name === name);
 
 	const serverSpecific = {
@@ -119,6 +122,26 @@ const C2J = require("csvtojson");
 				"tt": {
 					_type: "alias",
 					_orig: "timetable"
+				},
+				nowClass: {
+					_desc: "列出目前的課程資訊",
+					_usage: ".nowClass",
+					_func: function(msg, ...args) {
+						let day = ['','Ｍｏｎ','Ｔｕｅ','Ｗｅｄ','Ｔｈｕ','Ｆｒｉ',''][new Date().getDay()];
+						let text = stripIndents`目前是**${this.nowClassName}課**\n${this.nowClass == -1 ? '' : this.timetable[this.nowClass][day]}`;
+						let nowClassLink = this.classLinks[this.nowClassName];
+						if(nowClassLink != "" && nowClassLink.slice(0,4) == "http")
+							text += `\n可以去 ${nowClassLink} 上課`;
+						else if(nowClassLink != "")
+							text += `\n${nowClassLink}`;
+						else
+							text += `\n但目前沒有已知的訊息，可能要自己想辦法囉`;
+						msg.channel.send(text);
+					}
+				},
+				"nc": {
+					_type: "alias",
+					_orig: "nowClass"
 				},
 				"Auction": "sep",
 				auction: {
@@ -368,11 +391,14 @@ const C2J = require("csvtojson");
 				"TEST": "sep",
 			},
 			timetable: await C2J().fromFile("db/timetable.csv"),
-			checkAuction: async function(rawNowDate) {
+			classLinks: classLinksDB.data,
+			nowClass: -1,
+			nowClassName: "下",
+			checkAuction: async function(rawNowDateObj) {
 				const BRDB = this.db.get('biddingRooms');
 				BRDB.value().forEach(async auctionObj => {
 					let channel = Client.channels.cache.find(x => x.id == auctionObj["channelId"]);
-					if(rawNowDate.getTime() >= auctionObj["endTime"]) {
+					if(rawNowDateObj.getTime() >= auctionObj["endTime"]) {
 						channel.updateOverwrite(channel.guild.roles["everyone"], { VIEW_CHANNEL: false });
 						channel.updateOverwrite(channel.guild.members.cache.find(x => x.id == auctionObj["owner"]), { VIEW_CHANNEL: true });
 						if(auctionObj["lastBidder"] != auctionObj["owner"]) {	// has been bidded
@@ -395,8 +421,54 @@ const C2J = require("csvtojson");
 					}
 				});
 			},
-			interval: function(nowDate) {
-				this.checkAuction(nowDate);
+			sendClassAnnounce: function(nowDateObj) {
+				let channel = Client.channels.cache.find(x => x.id == 852371193092898826);
+				let day = ['','Ｍｏｎ','Ｔｕｅ','Ｗｅｄ','Ｔｈｕ','Ｆｒｉ',''][nowDateObj.getDay()];
+				if(day != '')
+					this.timetable.forEach((timeset, index) => {
+						let time = timeset['ｔｉｍｅ'].split('').map(x => {
+							let c = x.charCodeAt(0);
+							if(c >= 0xFF00 && c <= 0xFFEF)
+								c = 0xFF & (c + 0x20);
+							return String.fromCharCode(c);
+						}).join('');
+						let timesetHourStart = parseInt(time.slice(0,2));
+						let timesetMinuteStart = parseInt(time.slice(2,4));
+						let timesetHourStop = parseInt(time.slice(5,7));
+						let timesetMinuteStop = parseInt(time.slice(7,9));
+
+						let offsetPanning = 8 + (360+nowDateObj.getTimezoneOffset())/15;
+						let h = (nowDateObj.getHours() + offsetPanning)%24, m = nowDateObj.getMinutes();
+
+						if(h == timesetHourStop && m == timesetMinuteStop) {
+							if(this.nowClass != -1) {
+								this.nowClass = -1;
+								channel.send(`理論上現在下課囉`);
+								this.nowClassName = "下";
+							}
+						}else if(h == timesetHourStart && m == timesetMinuteStart) {
+							if(this.nowClass != index) {
+								this.nowClass = index;
+								this.nowClassName = timeset[day];
+								if(this.nowClassName != "－－") {
+									let nowClassLink = this.classLinks[this.nowClassName];
+									let textBefore = `@everyone，在正常情況下現在是**${this.nowClassName}課**的時間`;
+									if(nowClassLink != "" && nowClassLink.slice(0,4) == "http")
+										channel.send(stripIndents`${textBefore}
+											可以去 ${nowClassLink} 上課
+										`);
+									else if(nowClassLink != "")
+										channel.send(`${textBefore}\n${nowClassLink}`);
+									else
+										channel.send(`${textBefore}\n但目前沒有已知的訊息，可能要自己想辦法囉`);
+								}
+							}
+						}
+					});
+			},
+			interval: function(nowDateObj) {
+				this.checkAuction(nowDateObj);
+				this.sendClassAnnounce(nowDateObj);
 			},
 			invited: async function(guildId) {
 				guildDB.chain
