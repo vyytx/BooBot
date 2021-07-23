@@ -452,7 +452,7 @@ const C2J = require("csvtojson");
 								this.nowClassName = timeset[day];
 								if(this.nowClassName != "－－") {
 									let nowClassLink = this.classLinks[this.nowClassName];
-									let textBefore = `@everyone，在正常情況下現在是**${this.nowClassName}課**的時間`;
+									let textBefore = `在正常情況下現在是**${this.nowClassName}課**的時間`;
 									if(nowClassLink != "" && nowClassLink.slice(0,4) == "http")
 										channel.send(stripIndents`${textBefore}
 											可以去 ${nowClassLink} 上課
